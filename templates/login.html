@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Вход по коду — ContentHub{% endblock %}
+
+{% block content %}
+<div class="min-h-[calc(100vh-12rem)] flex items-center justify-center py-10 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-sm w-full bg-white p-7 sm:p-8 rounded-3xl shadow-sm border border-slate-200 text-center">
+        <!-- Icon -->
+        <div class="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-md shadow-slate-900/10">
+            <i data-lucide="key-round" class="w-7 h-7 text-blue-400"></i>
+        </div>
+        
+        <h2 class="text-2xl font-extrabold text-slate-900">Код доступа</h2>
+        <p class="mt-1 text-xs sm:text-sm text-slate-500">Введите PIN-код для входа в панель задач</p>
+
+        {% if error %}
+        <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center justify-center gap-2 animate-shake">
+            <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <form method="POST" action="/admin/login" id="pin-form" class="mt-6 space-y-5">
+            <!-- PIN Input Field -->
+            <div class="relative max-w-[240px] mx-auto">
+                <input type="password" 
+                       id="pin-input" 
+                       name="code" 
+                       required 
+                       autofocus 
+                       maxlength="10" 
+                       inputmode="numeric" 
+                       placeholder="••••"
+                       class="w-full py-3 px-4 text-center text-3xl font-mono tracking-[0.5em] rounded-2xl border-2 border-slate-200 focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-100 bg-slate-50/50 transition-all">
+                
+                <button type="button" id="toggle-pin-visibility" 
+                        class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+                    <i data-lucide="eye" id="eye-icon" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- On-Screen Numeric Keypad -->
+            <div class="grid grid-cols-3 gap-2.5 max-w-[240px] mx-auto pt-2">
+                <button type="button" onclick="pressDigit('1')" class="h-12 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-lg active:scale-95 transition-all shadow-sm border border-slate-100">1</button>
+                <button type="button" onclick="pressDigit('2')" class="h-12 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-lg active:scale-95 transition-all shadow-sm border border-slate-100">2</button>
+                <button type="button" onclick="pressDigit('3')" class="h-12 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-lg active:scale-95 transition-all shadow-sm border border-slate-100">3</button>
+                <button type="button" onclick="pressDigit('4')" class="h-12 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-lg active:scale-95 transition-all shadow-sm border border-slate-100">4</button>
+                <button type="button" onclick="pressDigit('5')" class="h-12 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-lg active:scale-95 transition-all shadow-sm border border-slate-100">5</button>
+                <button type="button" onclick="pressDigit('6')" class="h-12 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-lg active:scale-95 transition-all shadow-sm border border-slate-100">6</button>
+                <button type="button" onclick="pressDigit('7')" class="h-12 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-lg active:scale-95 transition-all shadow-sm border border-slate-100">7</button>
+                <button type="button" onclick="pressDigit('8')" class="h-12 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-lg active:scale-95 transition-all shadow-sm border border-slate-100">8</button>
+                <button type="button" onclick="pressDigit('9')" class="h-12 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-lg active:scale-95 transition-all shadow-sm border border-slate-100">9</button>
+                <button type="button" onclick="clearPin()" class="h-12 rounded-xl bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-600 font-medium text-xs active:scale-95 transition-all border border-slate-100">Сброс</button>
+                <button type="button" onclick="pressDigit('0')" class="h-12 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-lg active:scale-95 transition-all shadow-sm border border-slate-100">0</button>
+                <button type="button" onclick="backspacePin()" class="h-12 rounded-xl bg-slate-50 hover:bg-amber-50 text-slate-500 hover:text-amber-600 active:scale-95 transition-all flex items-center justify-center border border-slate-100">
+                    <i data-lucide="delete" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="pt-2">
+                <button type="submit"
+                    class="w-full py-3.5 px-4 rounded-xl font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-900/15 transition-all flex items-center justify-center gap-2 group">
+                    <span>Войти в панель</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+                </button>
+            </div>
+
+            <div class="pt-2 border-t border-slate-100">
+                <p class="text-[11px] text-slate-400">
+                    Код по умолчанию: <code class="bg-slate-100 text-slate-700 font-mono font-bold px-1.5 py-0.5 rounded">7788</code>
+                </p>
+                <p class="text-[10px] text-slate-400 mt-0.5">
+                    (код можно изменить в файле <span class="font-mono">.env</span> строкой <span class="font-mono">ADMIN_CODE=...</span>)
+                </p>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const pinInput = document.getElementById('pin-input');
+    const toggleBtn = document.getElementById('toggle-pin-visibility');
+    const eyeIcon = document.getElementById('eye-icon');
+
+    function pressDigit(digit) {
+        if (pinInput.value.length < 10) {
+            pinInput.value += digit;
+            pinInput.focus();
+        }
+    }
+
+    function clearPin() {
+        pinInput.value = '';
+        pinInput.focus();
+    }
+
+    function backspacePin() {
+        pinInput.value = pinInput.value.slice(0, -1);
+        pinInput.focus();
+    }
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            const isPassword = pinInput.type === 'password';
+            pinInput.type = isPassword ? 'text' : 'password';
+            eyeIcon.setAttribute('data-lucide', isPassword ? 'eye-off' : 'eye');
+            if (window.lucide) lucide.createIcons();
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Отправить запрос на обновление контента — ContentHub{% endblock %}
+
+{% block content %}
+<div class="py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
+    <!-- Header banner -->
+    <div class="text-center mb-8">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200/60 mb-3">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-blue-600"></i> Прямая загрузка правок в Google Диск
+        </span>
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Запрос на обновление контента</h1>
+        <p class="mt-2 text-slate-600 max-w-xl mx-auto text-sm sm:text-base">
+            Заполните форму и прикрепите один или несколько документов (Word, PDF, таблицы, архивы). Файлы автоматически сохранятся в ваш Google Диск.
+        </p>
+    </div>
+
+    <!-- Submission Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-6 sm:p-8">
+            <form id="content-request-form" enctype="multipart/form-data" class="space-y-6">
+                <!-- Row 1: Author & Contact -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                        <label for="author_name" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            Ваше имя / Отдел <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i data-lucide="user" class="w-4 h-4"></i>
+                            </span>
+                            <input type="text" id="author_name" name="author_name" required placeholder="Например: Анна (Отдел маркетинга)"
+                                class="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="author_contact" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            Контакт для связи <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i data-lucide="message-square" class="w-4 h-4"></i>
+                            </span>
+                            <input type="text" id="author_contact" name="author_contact" required placeholder="Telegram @username или телефон / email"
+                                class="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 2: Target Page & Priority -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    <div class="sm:col-span-2">
+                        <label for="target_page" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            Раздел или страница сайта <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i data-lucide="globe" class="w-4 h-4"></i>
+                            </span>
+                            <input type="text" id="target_page" name="target_page" required placeholder="Например: /services/price или 'Страница О компании'"
+                                class="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="priority" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            Срочность
+                        </label>
+                        <select id="priority" name="priority"
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                            <option value="normal">🟢 Обычная</option>
+                            <option value="urgent">🔴 Срочная (горит)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Row 3: Description -->
+                <div>
+                    <label for="description" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Краткое описание задачи <span class="text-red-500">*</span>
+                    </label>
+                    <textarea id="description" name="description" rows="3" required
+                        placeholder="Опишите суть изменений: что нужно обновить, убрать или добавить на страницу..."
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"></textarea>
+                </div>
+
+                <!-- Row 4: Multiple File Upload (Drag & Drop) -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-sm font-semibold text-slate-700">
+                            Документы с материалами правок <span class="text-red-500">*</span>
+                        </label>
+                        <span id="files-count-badge" class="hidden text-xs font-medium text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                            0 файлов
+                        </span>
+                    </div>
+
+                    <div id="drop-zone" 
+                         class="border-2 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50/40 rounded-2xl p-6 sm:p-7 text-center transition-all cursor-pointer relative bg-slate-50/50">
+                        <input type="file" id="file-input" name="files" multiple required
+                               accept=".doc,.docx,.pdf,.txt,.rtf,.odt,.zip,.rar,.xlsx,.xls,.png,.jpg,.jpeg"
+                               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                        
+                        <div id="drop-zone-prompt" class="space-y-2">
+                            <div class="w-12 h-12 bg-blue-100/70 text-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+                                <i data-lucide="cloud-upload" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <span class="text-sm font-semibold text-slate-800">Перетащите файлы сюда (один или несколько)</span>
+                                <span class="text-sm text-slate-500"> или <span class="text-blue-600 hover:underline">выберите на компьютере</span></span>
+                            </div>
+                            <p class="text-xs text-slate-400">
+                                Поддерживаются любые документы: Word, PDF, Excel, изображения, архивы
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Selected Files List Container -->
+                    <div id="files-list-container" class="hidden mt-3">
+                        <div class="flex items-center justify-between mb-2 px-1">
+                            <span class="text-xs font-semibold text-slate-600">Выбранные файлы:</span>
+                            <button type="button" id="clear-all-files-btn" class="text-xs text-red-600 hover:underline">Очистить все</button>
+                        </div>
+                        <div id="files-list" class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                            <!-- Files injected dynamically via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div>
+                    <button type="submit" id="submit-btn"
+                        class="w-full py-3.5 px-4 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2 group">
+                        <span id="btn-text">Отправить заявку</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform" id="btn-icon"></i>
+                        <svg id="btn-spinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div id="success-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-8 text-center shadow-2xl border border-slate-100 transform transition-all max-h-[90vh] overflow-y-auto">
+        <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <i data-lucide="check-circle-2" class="w-9 h-9"></i>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 mb-1">Запрос успешно принят!</h3>
+        <p class="text-sm text-slate-600 mb-4" id="success-message">
+            Задача создана, а все прикрепленные документы отправлены в Google Диск.
+        </p>
+
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6 text-left space-y-3 text-xs">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-200">
+                <span class="text-slate-500 font-medium">Номер задачи:</span>
+                <span id="modal-task-id" class="font-bold text-sm text-slate-800">#--</span>
+            </div>
+            
+            <div>
+                <p class="text-slate-500 font-medium mb-1.5">Загруженные документы:</p>
+                <div id="modal-files-list" class="space-y-1.5 max-h-40 overflow-y-auto">
+                    <!-- Files injected by JS -->
+                </div>
+            </div>
+        </div>
+
+        <button type="button" id="modal-close-btn" class="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-sm transition-colors">
+            Отправить ещё один запрос
+        </button>
+    </div>
+</div>
+{% endblock %}

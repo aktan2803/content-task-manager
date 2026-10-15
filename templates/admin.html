@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+
+{% block title %}Панель задач — ContentHub{% endblock %}
+
+{% block content %}
+<div class="py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <!-- Header with User and Google Drive Status -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Входящие задачи на обновление</h1>
+            <p class="text-sm text-slate-500 mt-1">Управляйте запросами, просматривайте документы и отмечайте выполненную работу</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+            <!-- Google Drive Status Pill -->
+            {% if drive_configured %}
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <i data-lucide="cloud" class="w-4 h-4"></i>
+                <span>Google Диск подключен</span>
+                <button type="button" onclick="testDriveConnection()" title="Проверить связь" class="hover:text-emerald-950 ml-1">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+            {% else %}
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                <i data-lucide="hard-drive" class="w-4 h-4"></i>
+                <span>Локальное хранилище</span>
+                <button type="button" onclick="openDriveSetupModal()" class="underline hover:text-amber-950 font-medium ml-1">
+                    Как подключить Google Диск?
+                </button>
+            </div>
+            {% endif %}
+
+            <!-- Logout Button -->
+            <a href="/admin/logout" class="px-3 py-1.5 rounded-xl text-xs font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 border border-slate-200 transition-colors flex items-center gap-1.5">
+                <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                <span>Выход</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <!-- Total -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                <i data-lucide="inbox" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-slate-500">Всего заявок</p>
+                <p id="stat-total" class="text-2xl font-bold text-slate-900">{{ stats.total }}</p>
+            </div>
+        </div>
+
+        <!-- Pending (Need Work) -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <i data-lucide="clock" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-slate-500">Нужно сделать</p>
+                <p id="stat-pending" class="text-2xl font-bold text-blue-600">{{ stats.pending }}</p>
+            </div>
+        </div>
+
+        <!-- In Progress -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <i data-lucide="loader" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-slate-500">В работе</p>
+                <p id="stat-in-progress" class="text-2xl font-bold text-amber-600">{{ stats.in_progress }}</p>
+            </div>
+        </div>
+
+        <!-- Completed -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-slate-500">Выполнено</p>
+                <p id="stat-completed" class="text-2xl font-bold text-emerald-600">{{ stats.completed }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter and Search Toolbar -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <!-- Status Filter Tabs -->
+        <div class="flex flex-wrap items-center gap-1.5">
+            <a href="/admin?status_filter=all{% if search %}&search={{ search }}{% endif %}" 
+               class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all {% if status_filter == 'all' %}bg-slate-900 text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+                Все ({{ stats.total }})
+            </a>
+            <a href="/admin?status_filter=pending{% if search %}&search={{ search }}{% endif %}" 
+               class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all {% if status_filter == 'pending' %}bg-blue-600 text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+                📌 Нужно сделать ({{ stats.pending }})
+            </a>
+            <a href="/admin?status_filter=new{% if search %}&search={{ search }}{% endif %}" 
+               class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all {% if status_filter == 'new' %}bg-slate-900 text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+                В очереди ({{ stats.new }})
+            </a>
+            <a href="/admin?status_filter=in_progress{% if search %}&search={{ search }}{% endif %}" 
+               class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all {% if status_filter == 'in_progress' %}bg-amber-500 text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+                В процессе ({{ stats.in_progress }})
+            </a>
+            <a href="/admin?status_filter=completed{% if search %}&search={{ search }}{% endif %}" 
+               class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all {% if status_filter == 'completed' %}bg-emerald-600 text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+                ✅ Сделано ({{ stats.completed }})
+            </a>
+        </div>
+
+        <!-- Search input -->
+        <form method="GET" action="/admin" class="relative max-w-xs w-full">
+            <input type="hidden" name="status_filter" value="{{ status_filter }}">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <i data-lucide="search" class="w-4 h-4"></i>
+            </span>
+            <input type="text" name="search" value="{{ search }}" placeholder="Поиск по задачам..." 
+                   class="w-full pl-9 pr-8 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+            {% if search %}
+            <a href="/admin?status_filter={{ status_filter }}" class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Tasks List -->
+    {% if tasks %}
+    <div class="space-y-4">
+        {% for task in tasks %}
+        <div id="task-card-{{ task.id }}" 
+             class="task-card bg-white rounded-2xl border transition-all p-5 shadow-sm hover:shadow-md {% if task.status == 'completed' %}border-emerald-200 bg-emerald-50/20{% else %}border-slate-200{% endif %}">
+            <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                
+                <!-- Left side: Checkbox + Content -->
+                <div class="flex items-start gap-4 flex-1">
+                    <!-- Master Checkbox (Mark Done) -->
+                    <div class="pt-0.5">
+                        <label class="relative flex items-center cursor-pointer group" title="Нажмите, чтобы отметить как сделано">
+                            <input type="checkbox" 
+                                   class="sr-only peer"
+                                   {% if task.status == 'completed' %}checked{% endif %}
+                                   onchange="toggleTaskDone({{ task.id }}, this.checked)">
+                            <div class="w-7 h-7 rounded-lg border-2 border-slate-300 peer-checked:border-emerald-500 peer-checked:bg-emerald-500 flex items-center justify-center transition-all group-hover:border-blue-500 group-hover:scale-105 shadow-sm">
+                                <i data-lucide="check" class="w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity"></i>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Details -->
+                    <div class="space-y-2 flex-1">
+                        <!-- Top meta row -->
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+                                #{{ task.id }}
+                            </span>
+                            
+                            <!-- Priority badge -->
+                            {% if task.priority == 'urgent' %}
+                            <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+                                <i data-lucide="flame" class="w-3 h-3 text-red-600"></i> Срочно
+                            </span>
+                            {% else %}
+                            <span class="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                                Обычный
+                            </span>
+                            {% endif %}
+
+                            <!-- Status badge -->
+                            <span id="status-badge-{{ task.id }}" class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1
+                                {% if task.status == 'completed' %}
+                                    bg-emerald-100 text-emerald-800
+                                {% elif task.status == 'in_progress' %}
+                                    bg-amber-100 text-amber-800
+                                {% else %}
+                                    bg-blue-100 text-blue-800
+                                {% endif %}">
+                                {% if task.status == 'completed' %}
+                                    <i data-lucide="check-check" class="w-3 h-3"></i> Сделано
+                                {% elif task.status == 'in_progress' %}
+                                    <i data-lucide="play" class="w-3 h-3"></i> В работе
+                                {% else %}
+                                    <i data-lucide="circle-dot" class="w-3 h-3"></i> В очереди
+                                {% endif %}
+                            </span>
+
+                            <span class="text-xs text-slate-400">
+                                <i data-lucide="calendar" class="w-3 h-3 inline mr-0.5"></i> {{ task.created_at }}
+                            </span>
+
+                            {% if task.completed_at %}
+                            <span class="text-xs text-emerald-600 font-medium">
+                                • Завершено: {{ task.completed_at }}
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Target Page & Requester -->
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                            <div class="font-bold text-slate-900 flex items-center gap-1.5">
+                                <i data-lucide="link" class="w-4 h-4 text-blue-600"></i>
+                                <span>Раздел:</span>
+                                <span class="text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">{{ task.target_page }}</span>
+                            </div>
+                            <div class="text-slate-500 text-xs flex items-center gap-1">
+                                <i data-lucide="user" class="w-3.5 h-3.5"></i>
+                                <span class="font-medium text-slate-700">{{ task.author_name }}</span>
+                                <span class="text-slate-400">({{ task.author_contact }})</span>
+                            </div>
+                        </div>
+
+                        <!-- Description text -->
+                        <div class="text-sm text-slate-700 bg-slate-50/70 p-3 rounded-xl border border-slate-100 whitespace-pre-wrap">
+                            {{ task.description }}
+                        </div>
+
+                        <!-- Admin Note / Comment Box -->
+                        <div class="pt-1">
+                            <div class="flex items-center gap-2">
+                                <input type="text" 
+                                       id="note-input-{{ task.id }}"
+                                       value="{{ task.admin_notes }}" 
+                                       placeholder="Рабочая заметка (например: 'Опубликовал в 14:00, ожидает проверки')..."
+                                       class="text-xs w-full max-w-lg px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                <button type="button" 
+                                        onclick="saveTaskNote({{ task.id }})" 
+                                        class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition-colors flex items-center gap-1">
+                                    <i data-lucide="save" class="w-3 h-3"></i>
+                                    <span>Сохранить</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right side: Google Drive document button & Controls -->
+                <div class="flex lg:flex-col items-center lg:items-end justify-between gap-3 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                    <!-- Document Links (single or multiple) -->
+                    <div class="flex flex-col gap-1.5 items-end w-full sm:w-auto">
+                        {% if task.files and task.files|length > 0 %}
+                            {% for f in task.files %}
+                            <a href="{{ f.url }}" target="_blank" 
+                               class="inline-flex items-center justify-between gap-2 px-3.5 py-1.5 rounded-xl font-medium text-xs transition-all shadow-sm w-full sm:w-auto
+                               {% if f.is_google_drive %}
+                                   bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/15
+                               {% else %}
+                                   bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/15
+                               {% endif %}"
+                               title="{{ f.name }}">
+                                <div class="flex items-center gap-1.5 truncate max-w-[180px]">
+                                    {% if f.is_google_drive %}
+                                        <i data-lucide="file-text" class="w-3.5 h-3.5 shrink-0"></i>
+                                    {% else %}
+                                        <i data-lucide="download" class="w-3.5 h-3.5 shrink-0"></i>
+                                    {% endif %}
+                                    <span class="truncate">{{ f.name }}</span>
+                                </div>
+                                <i data-lucide="external-link" class="w-3 h-3 opacity-70 shrink-0"></i>
+                            </a>
+                            {% endfor %}
+                        {% else %}
+                            <a href="{{ task.drive_file_url }}" target="_blank" 
+                               class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-medium text-xs transition-all shadow-sm bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/15">
+                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                                <span class="truncate max-w-[160px]">{{ task.original_filename }}</span>
+                            </a>
+                        {% endif %}
+                    </div>
+
+                    <!-- Granular Status Selector & Delete -->
+                    <div class="flex items-center gap-2 mt-2">
+                        <select onchange="updateTaskStatus({{ task.id }}, this.value)" 
+                                class="text-xs py-1 px-2.5 rounded-lg border border-slate-200 bg-white font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                            <option value="new" {% if task.status == 'new' %}selected{% endif %}>В очереди</option>
+                            <option value="in_progress" {% if task.status == 'in_progress' %}selected{% endif %}>В работе</option>
+                            <option value="completed" {% if task.status == 'completed' %}selected{% endif %}>Сделано ✅</option>
+                        </select>
+
+                        <button type="button" onclick="deleteTask({{ task.id }})" 
+                                title="Удалить задачу" 
+                                class="text-slate-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
+        <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <i data-lucide="clipboard-check" class="w-8 h-8"></i>
+        </div>
+        <h3 class="text-lg font-bold text-slate-800 mb-1">Нет активных задач</h3>
+        <p class="text-sm text-slate-500 max-w-md mx-auto mb-6">
+            {% if search or status_filter != 'all' %}
+                По заданному фильтру ничего не найдено. Попробуйте сбросить фильтры.
+            {% else %}
+                Все задачи выполнены либо еще не поступили. Отправьте тестовую заявку через клиентскую форму.
+            {% endif %}
+        </p>
+        <a href="/" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs transition-colors shadow-sm">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Создать заявку</span>
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal: How to connect Google Drive -->
+<div id="drive-setup-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-200 mb-5">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <i data-lucide="hard-drive" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900">Подключение Google Диска</h3>
+                    <p class="text-xs text-slate-500">Пошаговая инструкция за 3 минуты</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeDriveSetupModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <div class="space-y-4 text-xs sm:text-sm text-slate-600">
+            <div class="p-3 bg-blue-50/60 border border-blue-100 rounded-xl">
+                <p class="font-medium text-blue-900 mb-1">💡 Сейчас включен локальный режим (fallback)</p>
+                <p class="text-blue-700 text-xs leading-relaxed">
+                    Сайт полностью работает прямо сейчас! Файлы сохраняются в локальную папку <code class="font-mono bg-blue-100 px-1 py-0.5 rounded">uploads/</code>. Чтобы файлы автоматически падали в ваш Google Диск, выполните шаги ниже:
+                </p>
+            </div>
+
+            <ol class="list-decimal list-inside space-y-3 font-normal">
+                <li class="pl-1">
+                    <strong class="text-slate-800">Создайте сервисный аккаунт в Google Cloud:</strong><br>
+                    Перейдите в <a href="https://console.cloud.google.com/" target="_blank" class="text-blue-600 underline font-medium">Google Cloud Console</a>, создайте проект, включите <strong>Google Drive API</strong> и создайте сервисный аккаунт (Service Account).
+                </li>
+                <li class="pl-1">
+                    <strong class="text-slate-800">Скачайте ключ JSON:</strong><br>
+                    Во вкладке <em>Keys</em> сервисного аккаунта создайте ключ JSON и сохраните его в корневую папку сайта как <code class="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-800">service_account.json</code>.
+                </li>
+                <li class="pl-1">
+                    <strong class="text-slate-800">Создайте папку на Google Диске:</strong><br>
+                    Создайте любую папку на вашем Google Диске (например: <em>"Правки сайта"</em>), нажмите <em>"Поделиться"</em> и добавьте email вашего сервисного аккаунта (<span class="font-mono text-xs text-slate-700">xxx@xxx.iam.gserviceaccount.com</span>) с правами <strong>Редактор</strong>.
+                </li>
+                <li class="pl-1">
+                    <strong class="text-slate-800">Укажите ID папки:</strong><br>
+                    Скопируйте ID папки из адресной строки Google Диска и вставьте его в файл <code class="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-800">.env</code> в строке:
+                    <pre class="bg-slate-900 text-emerald-400 p-2.5 rounded-xl font-mono text-xs my-2 select-all">GOOGLE_DRIVE_FOLDER_ID=1AbC_xyz123yourFolderIdHere</pre>
+                </li>
+            </ol>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-200 flex justify-end gap-3">
+            <button type="button" onclick="testDriveConnection()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                <span>Проверить подключение</span>
+            </button>
+            <button type="button" onclick="closeDriveSetupModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-medium transition-colors">
+                Закрыть
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
