@@ -210,6 +210,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (response.ok && data.success) {
                     // Populate success modal
                     document.getElementById('modal-task-id').textContent = `#${data.task_id}`;
+                    const trackBtn = document.getElementById('modal-track-btn');
+                    if (trackBtn) {
+                        trackBtn.href = `/track?q=${data.task_id}`;
+                    }
                     
                     const modalList = document.getElementById('modal-files-list');
                     if (modalList && data.files && data.files.length) {

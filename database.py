@@ -208,3 +208,42 @@ def get_stats() -> Dict[str, int]:
         "completed": completed,
         "pending": new_count + in_progress
     }
+
+def search_public_task(query_str: str) -> List[Dict[str, Any]]:
+    """Search tasks for public tracking by task ID, contact, or author name."""
+    if not query_str or not query_str.strip():
+        return []
+    
+    clean_query = query_str.strip()
+    id_candidate = clean_query.lstrip("#")
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Priority 1: Exact ID match
+    if id_candidate.isdigit():
+        cursor.execute("SELECT * FROM tasks WHERE id = ?", (int(id_candidate),))
+        rows = cursor.fetchall()
+        if rows:
+            conn.close()
+            return [_parse_task_row(r) for r in rows]
+            
+    # Priority 2: Contact, Name, or Target Page match
+    param = f"%{clean_query}%"
+    cursor.execute("""
+        SELECT * FROM tasks
+        WHERE author_contact LIKE ? OR author_name LIKE ? OR target_page LIKE ?
+        ORDER BY id DESC LIMIT 20
+    """, (param, param, param))
+    rows = cursor.fetchall()
+    conn.close()
+    return [_parse_task_row(r) for r in rows]
+
+def get_public_board_tasks(limit: int = 25) -> List[Dict[str, Any]]:
+    """Fetches recent tasks for public tracking overview."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tasks ORDER BY id DESC LIMIT ?", (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [_parse_task_row(r) for r in rows]

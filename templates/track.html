@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+
+{% block title %}Отслеживание статуса заявок — ContentHub{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <!-- Header -->
+    <div class="text-center max-w-2xl mx-auto mb-10">
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold uppercase tracking-wider mb-3">
+            <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+            <span>Публичный трекер задач</span>
+        </div>
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            Статус выполнения заявок
+        </h1>
+        <p class="mt-3 text-base text-slate-600">
+            Введите номер заявки или контактные данные, чтобы проверить, на каком этапе находятся правки для сайта.
+        </p>
+
+        <!-- Search Box -->
+        <form method="GET" action="/track" class="mt-8 max-w-xl mx-auto">
+            <div class="relative flex items-center shadow-lg shadow-blue-500/10 rounded-2xl bg-white border-2 border-slate-200 focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-100 transition-all p-1.5">
+                <div class="pl-3.5 pr-2 text-slate-400">
+                    <i data-lucide="search" class="w-5 h-5"></i>
+                </div>
+                <input type="text" 
+                       name="q" 
+                       value="{{ search_query }}" 
+                       placeholder="Номер заявки (например, 15) или email / телефон" 
+                       class="w-full py-2.5 px-2 bg-transparent text-slate-900 placeholder-slate-400 focus:outline-none text-sm font-medium">
+                {% if search_query %}
+                <a href="/track" class="p-2 text-slate-400 hover:text-slate-600 rounded-lg mr-1 transition-colors" title="Очистить поиск">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </a>
+                {% endif %}
+                <button type="submit" 
+                        class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all shadow-md shadow-blue-600/20 shrink-0">
+                    Найти
+                </button>
+            </div>
+            <div class="mt-2.5 flex items-center justify-center gap-2 text-xs text-slate-400">
+                <span>Например:</span>
+                <a href="/track?q=15" class="underline hover:text-blue-600">#15</a>
+                <span>•</span>
+                <a href="/track?q=14" class="underline hover:text-blue-600">#14</a>
+                <span>•</span>
+                <a href="/track?q=13" class="underline hover:text-blue-600">#13</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Quick Stats Bar -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <i data-lucide="inbox" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <div class="text-xs text-slate-500 font-medium">В очереди</div>
+                <div class="text-xl font-bold text-slate-900">{{ stats.new }}</div>
+            </div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <i data-lucide="loader" class="w-5 h-5 animate-spin"></i>
+            </div>
+            <div>
+                <div class="text-xs text-slate-500 font-medium">В работе</div>
+                <div class="text-xl font-bold text-amber-600">{{ stats.in_progress }}</div>
+            </div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <div class="text-xs text-slate-500 font-medium">Выполнено</div>
+                <div class="text-xl font-bold text-emerald-600">{{ stats.completed }}</div>
+            </div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                <i data-lucide="layers" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <div class="text-xs text-slate-500 font-medium">Всего обработано</div>
+                <div class="text-xl font-bold text-slate-800">{{ stats.total }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Results Section -->
+    {% if search_query %}
+    <div class="mb-12">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <i data-lucide="search" class="w-5 h-5 text-blue-600"></i>
+                <span>Результаты поиска по запросу «{{ search_query }}»</span>
+            </h2>
+            <span class="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full font-medium">
+                Найдено: {{ search_results|length }}
+            </span>
+        </div>
+
+        {% if search_results %}
+        <div class="space-y-6">
+            {% for task in search_results %}
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+                <!-- Top Status Header -->
+                <div class="p-5 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r 
+                    {% if task.status == 'completed' %}from-emerald-50/50 to-white
+                    {% elif task.status == 'in_progress' %}from-amber-50/50 to-white
+                    {% else %}from-blue-50/50 to-white{% endif %}">
+                    <div class="flex items-center gap-3">
+                        <span class="px-3.5 py-1.5 rounded-xl text-base font-extrabold font-mono bg-slate-900 text-white shadow-sm">
+                            #{{ task.id }}
+                        </span>
+                        <div>
+                            <div class="text-xs text-slate-500">Раздел / Страница:</div>
+                            <div class="font-bold text-slate-900 text-base">{{ task.target_page }}</div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        {% if task.status == 'new' %}
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                            Принято в очередь
+                        </span>
+                        {% elif task.status == 'in_progress' %}
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                            <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                            В работе у контент-менеджера
+                        </span>
+                        {% elif task.status == 'completed' %}
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                            <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i>
+                            Выполнено и опубликовано
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Stepper Progress Bar -->
+                <div class="px-6 py-6 bg-slate-50/60 border-b border-slate-100">
+                    <div class="relative flex items-center justify-between max-w-2xl mx-auto">
+                        <!-- Connecting Line -->
+                        <div class="absolute left-6 right-6 top-5 -translate-y-1/2 h-1 bg-slate-200 -z-0">
+                            <div class="h-full bg-blue-600 transition-all duration-500 
+                                {% if task.status == 'completed' %}w-full
+                                {% elif task.status == 'in_progress' %}w-1/2
+                                {% else %}w-0{% endif %}"></div>
+                        </div>
+
+                        <!-- Step 1: Received -->
+                        <div class="relative z-10 flex flex-col items-center text-center">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm text-white bg-blue-600 shadow-md shadow-blue-500/20">
+                                <i data-lucide="check" class="w-5 h-5"></i>
+                            </div>
+                            <span class="mt-2 text-xs font-semibold text-slate-800">Заявка принята</span>
+                            <span class="text-[10px] text-slate-500">{{ task.created_at }}</span>
+                        </div>
+
+                        <!-- Step 2: In Progress -->
+                        <div class="relative z-10 flex flex-col items-center text-center">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors
+                                {% if task.status == 'in_progress' %}bg-amber-500 text-white shadow-md shadow-amber-500/20 animate-pulse
+                                {% elif task.status == 'completed' %}bg-blue-600 text-white shadow-md shadow-blue-500/20
+                                {% else %}bg-slate-200 text-slate-500{% endif %}">
+                                {% if task.status == 'completed' %}
+                                <i data-lucide="check" class="w-5 h-5"></i>
+                                {% else %}
+                                <i data-lucide="wrench" class="w-4 h-4"></i>
+                                {% endif %}
+                            </div>
+                            <span class="mt-2 text-xs font-semibold 
+                                {% if task.status in ['in_progress', 'completed'] %}text-slate-800{% else %}text-slate-400{% endif %}">
+                                Внесение правок
+                            </span>
+                            <span class="text-[10px] text-slate-500">
+                                {% if task.status == 'in_progress' %}Выполняется сейчас
+                                {% elif task.status == 'completed' %}Пройдено
+                                {% else %}Ожидает очереди{% endif %}
+                            </span>
+                        </div>
+
+                        <!-- Step 3: Done -->
+                        <div class="relative z-10 flex flex-col items-center text-center">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors
+                                {% if task.status == 'completed' %}bg-emerald-600 text-white shadow-md shadow-emerald-500/20
+                                {% else %}bg-slate-200 text-slate-500{% endif %}">
+                                <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+                            </div>
+                            <span class="mt-2 text-xs font-semibold 
+                                {% if task.status == 'completed' %}text-emerald-700 font-bold{% else %}text-slate-400{% endif %}">
+                                Опубликовано
+                            </span>
+                            <span class="text-[10px] text-slate-500">
+                                {% if task.completed_at %}{{ task.completed_at }}{% else %}Ожидается{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Task Body Details -->
+                <div class="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-2 space-y-4">
+                        <div>
+                            <div class="text-xs font-semibold uppercase text-slate-400 tracking-wider mb-1">Описание запроса</div>
+                            <p class="text-sm text-slate-700 whitespace-pre-line bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                {{ task.description }}
+                            </p>
+                        </div>
+
+                        <!-- Admin Note / Specialist Response -->
+                        {% if task.admin_notes %}
+                        <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-1">
+                            <div class="flex items-center gap-2 font-bold text-xs text-emerald-800">
+                                <i data-lucide="message-square" class="w-4 h-4"></i>
+                                <span>Ответ контент-менеджера:</span>
+                            </div>
+                            <p class="text-xs sm:text-sm text-emerald-800 whitespace-pre-line pl-6">
+                                {{ task.admin_notes }}
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Sidebar info -->
+                    <div class="space-y-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-100 text-xs">
+                        <div>
+                            <span class="text-slate-400 block mb-0.5">Заявитель:</span>
+                            <span class="font-semibold text-slate-800">{{ task.author_name }}</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block mb-0.5">Приоритет:</span>
+                            {% if task.priority == 'high' %}
+                            <span class="inline-flex items-center gap-1 font-bold text-amber-600">
+                                <i data-lucide="flame" class="w-3.5 h-3.5"></i> Высокий
+                            </span>
+                            {% elif task.priority == 'urgent' %}
+                            <span class="inline-flex items-center gap-1 font-bold text-red-600">
+                                <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> Срочно
+                            </span>
+                            {% else %}
+                            <span class="text-slate-600">Обычный</span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block mb-1">Прикрепленные файлы ({{ task.files|length }}):</span>
+                            <div class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                                {% for file in task.files %}
+                                <a href="{{ file.url }}" target="_blank" 
+                                   class="flex items-center gap-1.5 p-2 rounded-lg bg-white border border-slate-200 hover:border-blue-400 text-slate-700 hover:text-blue-600 transition-colors group">
+                                    <i data-lucide="file-text" class="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 shrink-0"></i>
+                                    <span class="truncate font-medium">{{ file.name }}</span>
+                                    <i data-lucide="external-link" class="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 shrink-0"></i>
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Empty Result -->
+        <div class="bg-white p-10 rounded-3xl border border-slate-200 text-center max-w-md mx-auto shadow-sm">
+            <div class="w-14 h-14 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <i data-lucide="alert-circle" class="w-7 h-7"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-900 mb-1">Заявка не найдена</h3>
+            <p class="text-xs text-slate-500 mb-4">
+                По запросу «{{ search_query }}» не найдено ни одной задачи. Пожалуйста, проверьте номер заявки или контактный телефон/email.
+            </p>
+            <a href="/track" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors">
+                <span>Сбросить поиск</span>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Public Live Board of All Recent Tasks -->
+    <div>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+            <div>
+                <h2 class="text-xl font-bold text-slate-900">Текущая очередь обновлений</h2>
+                <p class="text-xs text-slate-500">Последние задачи, поступившие в отдел контента</p>
+            </div>
+
+            <!-- Filters -->
+            <div class="flex items-center gap-1.5 p-1 bg-white border border-slate-200 rounded-xl text-xs shadow-sm" id="board-tabs">
+                <button type="button" onclick="filterBoard('all')" class="px-3 py-1.5 rounded-lg font-medium transition-all bg-slate-900 text-white" id="tab-all">
+                    Все ({{ board_tasks|length }})
+                </button>
+                <button type="button" onclick="filterBoard('in_progress')" class="px-3 py-1.5 rounded-lg font-medium text-slate-600 hover:bg-slate-100 transition-all" id="tab-in_progress">
+                    В работе
+                </button>
+                <button type="button" onclick="filterBoard('completed')" class="px-3 py-1.5 rounded-lg font-medium text-slate-600 hover:bg-slate-100 transition-all" id="tab-completed">
+                    Выполненные
+                </button>
+            </div>
+        </div>
+
+        {% if board_tasks %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="board-cards">
+            {% for task in board_tasks %}
+            <div class="board-card bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                 data-status="{{ task.status }}">
+                <div>
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <span class="font-mono font-bold text-sm px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                            #{{ task.id }}
+                        </span>
+                        {% if task.status == 'new' %}
+                        <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/50">
+                            В очереди
+                        </span>
+                        {% elif task.status == 'in_progress' %}
+                        <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/50 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                            В работе
+                        </span>
+                        {% elif task.status == 'completed' %}
+                        <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/50 flex items-center gap-1">
+                            <i data-lucide="check" class="w-3 h-3"></i>
+                            Готово
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <h3 class="font-bold text-slate-900 text-sm mb-1 line-clamp-1" title="{{ task.target_page }}">
+                        {{ task.target_page }}
+                    </h3>
+                    <p class="text-xs text-slate-500 line-clamp-2 mb-3">
+                        {{ task.description }}
+                    </p>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                    <span class="flex items-center gap-1">
+                        <i data-lucide="user" class="w-3 h-3"></i>
+                        {{ task.author_name }}
+                    </span>
+                    <a href="/track?q={{ task.id }}" class="text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-0.5 hover:underline">
+                        <span>Статус</span>
+                        <i data-lucide="chevron-right" class="w-3 h-3"></i>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-500 text-sm">
+            Заявок пока нет.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function filterBoard(status) {
+        const cards = document.querySelectorAll('.board-card');
+        const tabs = ['all', 'in_progress', 'completed'];
+
+        tabs.forEach(tab => {
+            const btn = document.getElementById('tab-' + tab);
+            if (tab === status) {
+                btn.className = "px-3 py-1.5 rounded-lg font-medium transition-all bg-slate-900 text-white";
+            } else {
+                btn.className = "px-3 py-1.5 rounded-lg font-medium text-slate-600 hover:bg-slate-100 transition-all";
+            }
+        });
+
+        cards.forEach(card => {
+            if (status === 'all') {
+                card.style.display = 'flex';
+            } else if (card.getAttribute('data-status') === status) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}

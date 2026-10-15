@@ -112,6 +112,54 @@ async def submit_task(
         "message": f"Заявка #{task_id} успешно создана! Загружено файлов: {count}."
     })
 
+# --- PUBLIC TRACKER ROUTE ---
+
+@app.get("/track", response_class=HTMLResponse)
+@app.get("/tracker", response_class=HTMLResponse)
+@app.get("/status", response_class=HTMLResponse)
+async def public_tracker_page(request: Request, q: Optional[str] = None):
+    """Public page for applicants to track task status and progress."""
+    search_query = (q or "").strip()
+    search_results = []
+    
+    if search_query:
+        search_results = database.search_public_task(search_query)
+        
+    board_tasks = database.get_public_board_tasks(limit=30)
+    stats = database.get_stats()
+    
+    return templates.TemplateResponse(
+        request=request,
+        name="track.html",
+        context={
+            "search_query": search_query,
+            "search_results": search_results,
+            "board_tasks": board_tasks,
+            "stats": stats
+        }
+    )
+
+@app.get("/api/track/{task_id}")
+async def api_track_task(task_id: int):
+    """API endpoint to get status of a specific task."""
+    task = database.get_task_by_id(task_id)
+    if not task:
+        return JSONResponse({"success": False, "message": "Заявка не найдена"}, status_code=404)
+        
+    return JSONResponse({
+        "success": True,
+        "task": {
+            "id": task["id"],
+            "status": task["status"],
+            "created_at": task["created_at"],
+            "completed_at": task.get("completed_at"),
+            "target_page": task["target_page"],
+            "priority": task.get("priority", "normal"),
+            "admin_notes": task.get("admin_notes", ""),
+            "files_count": len(task.get("files", []))
+        }
+    })
+
 # --- ADMIN ROUTES ---
 
 @app.get("/admin/login", response_class=HTMLResponse)

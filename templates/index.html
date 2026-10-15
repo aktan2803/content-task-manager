@@ -170,9 +170,15 @@
             </div>
         </div>
 
-        <button type="button" id="modal-close-btn" class="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-sm transition-colors">
-            Отправить ещё один запрос
-        </button>
+        <div class="flex flex-col sm:flex-row gap-2">
+            <a href="/track" id="modal-track-btn" class="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/20">
+                <i data-lucide="activity" class="w-4 h-4"></i>
+                <span>Отслеживать статус</span>
+            </a>
+            <button type="button" id="modal-close-btn" class="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm transition-colors">
+                Отправить ещё
+            </button>
+        </div>
     </div>
 </div>
 {% endblock %}
