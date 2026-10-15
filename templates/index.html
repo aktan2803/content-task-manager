@@ -19,18 +19,41 @@
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="p-6 sm:p-8">
             <form id="content-request-form" enctype="multipart/form-data" class="space-y-6">
-                <!-- Row 1: Author & Contact -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <!-- Row 1: Author, Department & Contact -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
                     <div>
                         <label for="author_name" class="block text-sm font-semibold text-slate-700 mb-1.5">
-                            Ваше имя / Отдел <span class="text-red-500">*</span>
+                            Ваше имя (ФИО) <span class="text-red-500">*</span>
                         </label>
                         <div class="relative">
                             <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                                 <i data-lucide="user" class="w-4 h-4"></i>
                             </span>
-                            <input type="text" id="author_name" name="author_name" required placeholder="Например: Анна (Отдел маркетинга)"
+                            <input type="text" id="author_name" name="author_name" required placeholder="Например: Айбек"
                                 class="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="department" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            Отдел / Факультет <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i data-lucide="building-2" class="w-4 h-4"></i>
+                            </span>
+                            <input type="text" id="department" name="department" required list="department-list" placeholder="Отдел качества / Маркетинг..."
+                                class="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                            <datalist id="department-list">
+                                <option value="Отдел качества">
+                                <option value="Отдел маркетинга">
+                                <option value="Деканат">
+                                <option value="IT отдел">
+                                <option value="Бухгалтерия">
+                                <option value="Отдел кадров">
+                                <option value="Пресс-служба">
+                                <option value="Ректорат">
+                            </datalist>
                         </div>
                     </div>
 
@@ -40,9 +63,9 @@
                         </label>
                         <div class="relative">
                             <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                <i data-lucide="message-square" class="w-4 h-4"></i>
+                                <i data-lucide="phone" class="w-4 h-4"></i>
                             </span>
-                            <input type="text" id="author_contact" name="author_contact" required placeholder="Telegram @username или телефон / email"
+                            <input type="text" id="author_contact" name="author_contact" required placeholder="Telegram / Телефон / Email"
                                 class="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                         </div>
                     </div>

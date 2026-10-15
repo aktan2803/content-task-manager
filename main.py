@@ -49,6 +49,7 @@ async def submit_task(
     author_contact: str = Form(...),
     target_page: str = Form(...),
     description: str = Form(...),
+    department: Optional[str] = Form(""),
     priority: str = Form("normal"),
     files: List[UploadFile] = File(default=[]),
     file: Optional[UploadFile] = File(default=None)
@@ -96,7 +97,8 @@ async def submit_task(
         target_page=target_page.strip(),
         description=description.strip(),
         priority=priority,
-        files=saved_files
+        files=saved_files,
+        department=(department or "").strip()
     )
     
     all_in_drive = all(f.get("is_google_drive", False) for f in saved_files)
@@ -117,16 +119,22 @@ async def submit_task(
 @app.get("/track", response_class=HTMLResponse)
 @app.get("/tracker", response_class=HTMLResponse)
 @app.get("/status", response_class=HTMLResponse)
-async def public_tracker_page(request: Request, q: Optional[str] = None):
+async def public_tracker_page(
+    request: Request,
+    q: Optional[str] = None,
+    dept: Optional[str] = None
+):
     """Public page for applicants to track task status and progress."""
     search_query = (q or "").strip()
+    dept_filter = (dept or "").strip()
     search_results = []
     
-    if search_query:
-        search_results = database.search_public_task(search_query)
+    if search_query or (dept_filter and dept_filter != "all"):
+        search_results = database.search_public_task(search_query, dept_filter=dept_filter if dept_filter != "all" else None)
         
-    board_tasks = database.get_public_board_tasks(limit=30)
+    board_tasks = database.get_public_board_tasks(limit=50, dept_filter=dept_filter if dept_filter != "all" else None)
     stats = database.get_stats()
+    departments = database.get_departments()
     
     return templates.TemplateResponse(
         request=request,
@@ -135,7 +143,9 @@ async def public_tracker_page(request: Request, q: Optional[str] = None):
             "search_query": search_query,
             "search_results": search_results,
             "board_tasks": board_tasks,
-            "stats": stats
+            "stats": stats,
+            "departments": departments,
+            "selected_dept": dept_filter or "all"
         }
     )
 

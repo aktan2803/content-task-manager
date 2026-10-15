@@ -40,12 +40,38 @@ def init_db():
     columns = [col[1] for col in cursor.fetchall()]
     if "files_json" not in columns:
         cursor.execute("ALTER TABLE tasks ADD COLUMN files_json TEXT DEFAULT '[]'")
+    if "department" not in columns:
+        cursor.execute("ALTER TABLE tasks ADD COLUMN department TEXT DEFAULT ''")
 
     conn.commit()
     conn.close()
 
 def _parse_task_row(row: sqlite3.Row) -> Dict[str, Any]:
     task = dict(row)
+    
+    # Department handling & smart fallback
+    dept = (task.get("department") or "").strip()
+    if not dept:
+        author = task.get("author_name", "")
+        if "(" in author and ")" in author:
+            try:
+                dept = author.split("(")[1].split(")")[0].strip()
+            except Exception:
+                dept = ""
+        tp = (task.get("target_page") or "").lower()
+        if not dept:
+            if "quality" in tp or "качеств" in tp:
+                dept = "Отдел качества"
+            elif "market" in tp or "маркет" in tp:
+                dept = "Отдел маркетинга"
+            elif "decan" in tp or "декан" in tp:
+                dept = "Деканат"
+            elif "it" in tp or "ит" in tp:
+                dept = "IT отдел"
+            else:
+                dept = "Общий отдел"
+    task["department"] = dept
+
     files_raw = task.get("files_json") or "[]"
     try:
         parsed_files = json.loads(files_raw)
@@ -81,7 +107,8 @@ def create_task(
     target_page: str,
     description: str,
     priority: str,
-    files: List[Dict[str, Any]]
+    files: List[Dict[str, Any]],
+    department: str = ""
 ) -> int:
     conn = get_connection()
     cursor = conn.cursor()
@@ -97,18 +124,19 @@ def create_task(
     total_size = sum(f.get("size", 0) for f in files)
     is_drive_all = 1 if all(f.get("is_google_drive", False) for f in files) else 0
     files_json_str = json.dumps(files, ensure_ascii=False)
+    dept_val = department.strip() if department else ""
 
     cursor.execute("""
         INSERT INTO tasks (
             created_at, author_name, author_contact, target_page,
             description, priority, original_filename, file_size,
-            drive_file_id, drive_file_url, local_filename, is_google_drive, status, files_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)
+            drive_file_id, drive_file_url, local_filename, is_google_drive, status, files_json, department
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?)
     """, (
         now_iso, author_name, author_contact, target_page,
         description, priority, display_filename, total_size,
         primary_file.get("id", ""), primary_file.get("url", ""),
-        primary_file.get("local_filename", ""), is_drive_all, files_json_str
+        primary_file.get("local_filename", ""), is_drive_all, files_json_str, dept_val
     ))
     task_id = cursor.lastrowid
     conn.commit()
@@ -131,8 +159,8 @@ def get_tasks(status_filter: Optional[str] = None, search: Optional[str] = None)
             
     if search:
         search_param = f"%{search.strip()}%"
-        query += " AND (author_name LIKE ? OR target_page LIKE ? OR description LIKE ? OR original_filename LIKE ?)"
-        params.extend([search_param, search_param, search_param, search_param])
+        query += " AND (author_name LIKE ? OR department LIKE ? OR target_page LIKE ? OR description LIKE ? OR original_filename LIKE ?)"
+        params.extend([search_param, search_param, search_param, search_param, search_param])
         
     query += " ORDER BY id DESC"
     
@@ -209,12 +237,9 @@ def get_stats() -> Dict[str, int]:
         "pending": new_count + in_progress
     }
 
-def search_public_task(query_str: str) -> List[Dict[str, Any]]:
-    """Search tasks for public tracking by task ID, contact, or author name."""
-    if not query_str or not query_str.strip():
-        return []
-    
-    clean_query = query_str.strip()
+def search_public_task(query_str: str, dept_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Search tasks for public tracking by task ID, contact, author name, or department."""
+    clean_query = (query_str or "").strip()
     id_candidate = clean_query.lstrip("#")
     
     conn = get_connection()
@@ -228,22 +253,47 @@ def search_public_task(query_str: str) -> List[Dict[str, Any]]:
             conn.close()
             return [_parse_task_row(r) for r in rows]
             
-    # Priority 2: Contact, Name, or Target Page match
-    param = f"%{clean_query}%"
-    cursor.execute("""
-        SELECT * FROM tasks
-        WHERE author_contact LIKE ? OR author_name LIKE ? OR target_page LIKE ?
-        ORDER BY id DESC LIMIT 20
-    """, (param, param, param))
+    # Priority 2: Search across name, department, contact, or page
+    query = "SELECT * FROM tasks WHERE 1=1"
+    params = []
+
+    if clean_query:
+        param = f"%{clean_query}%"
+        query += " AND (author_name LIKE ? OR department LIKE ? OR author_contact LIKE ? OR target_page LIKE ? OR description LIKE ?)"
+        params.extend([param, param, param, param, param])
+
+    if dept_filter and dept_filter != "all":
+        query += " AND department = ?"
+        params.append(dept_filter)
+
+    query += " ORDER BY id DESC LIMIT 50"
+    
+    cursor.execute(query, params)
     rows = cursor.fetchall()
     conn.close()
     return [_parse_task_row(r) for r in rows]
 
-def get_public_board_tasks(limit: int = 25) -> List[Dict[str, Any]]:
-    """Fetches recent tasks for public tracking overview."""
+def get_public_board_tasks(limit: int = 50, dept_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Fetches recent tasks for public tracking overview, optionally filtered by department."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM tasks ORDER BY id DESC LIMIT ?", (limit,))
+    if dept_filter and dept_filter != "all":
+        cursor.execute("SELECT * FROM tasks WHERE department = ? ORDER BY id DESC LIMIT ?", (dept_filter, limit))
+    else:
+        cursor.execute("SELECT * FROM tasks ORDER BY id DESC LIMIT ?", (limit,))
     rows = cursor.fetchall()
     conn.close()
     return [_parse_task_row(r) for r in rows]
+
+def get_departments() -> List[str]:
+    """Returns sorted unique departments found in tasks."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT DISTINCT department FROM tasks WHERE department IS NOT NULL AND department != ''")
+    depts = [row[0].strip() for row in cursor.fetchall() if row[0] and row[0].strip()]
+    conn.close()
+    
+    # Standard departments to recommend if none in DB yet
+    defaults = ["Отдел качества", "Отдел маркетинга", "Деканат", "IT отдел", "Бухгалтерия", "Отдел кадров", "Пресс-служба"]
+    all_depts = sorted(list(set(depts + defaults)))
+    return all_depts
